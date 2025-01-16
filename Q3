@@ -1,0 +1,100 @@
+import pandas as pd
+import os
+import numpy as np
+
+def calculate_average_monthly_temperatures(data):
+    """
+    Calculates the average temperature for each month.
+
+    Args:
+        data: DataFrame containing temperature data with columns 'Date' and 'Temperature'.
+
+    Returns:
+        Series: Series with month as index and average temperature as values.
+    """
+    data['Month'] = pd.to_datetime(data['Date']).dt.month
+    return data.groupby('Month')['Temperature'].mean()
+
+def calculate_seasonal_averages(data):
+    """
+    Calculates the average temperature for each season across all years.
+
+    Args:
+        data: DataFrame containing temperature data with columns 'Date' and 'Temperature'.
+
+    Returns:
+        Series: Series with seasons as index and average temperature as values.
+    """
+    data['Season'] = pd.to_datetime(data['Date']).dt.month.map({
+        12: 'Winter', 1: 'Winter', 2: 'Summer', 
+        3: 'Autumn', 4: 'Autumn', 5: 'Spring', 
+        6: 'Autumn', 7: 'Winter', 8: 'Spring', 
+        9: 'Spring', 10: 'Summer', 11: 'Summer'
+    })
+    return data.groupby('Season')['Temperature'].mean()
+
+def find_station_with_largest_temp_range(data):
+    """
+    Finds the station/stations with the largest temperature range.
+
+    Args:
+        data: DataFrame containing temperature data with columns 'Station' and 'Temperature'.
+
+    Returns:
+        list: List of station names with the largest temperature range.
+    """
+    temp_ranges = data.groupby('Station')['Temperature'].max() - data.groupby('Station')['Temperature'].min()
+    max_range = temp_ranges.max()
+    return list(temp_ranges[temp_ranges == max_range].index)
+
+def find_warmest_and_coolest_stations(data):
+    """
+    Finds the warmest and coolest station/stations.
+
+    Args:
+        data: DataFrame containing temperature data with columns 'Station' and 'Temperature'.
+
+    Returns:
+        tuple: Tuple containing lists of warmest and coolest stations.
+    """
+    warmest = data.groupby('Station')['Temperature'].mean().idxmax()
+    coolest = data.groupby('Station')['Temperature'].mean().idxmin()
+    return [warmest], [coolest]
+
+def main():
+    """
+    Main function to read data, perform analysis, and save results.
+    """
+    data_dir = 'temperatures'
+    all_data = pd.DataFrame()
+
+    # Read data from all CSV files
+    for filename in os.listdir(data_dir):
+        if filename.endswith('.csv'):
+            filepath = os.path.join(data_dir, filename)
+            year_data = pd.read_csv(filepath)
+            all_data = pd.concat([all_data, year_data])
+
+    # Calculate average monthly temperatures
+    monthly_avg_temp = calculate_average_monthly_temperatures(all_data)
+    with open('average_temp.txt', 'w') as f:
+        f.write(str(monthly_avg_temp))
+
+    # Calculate average seasonal temperatures
+    seasonal_avg_temp = calculate_seasonal_averages(all_data)
+    print("Average Seasonal Temperatures:")
+    print(seasonal_avg_temp)
+
+    # Find station with largest temperature range
+    stations_with_largest_range = find_station_with_largest_temp_range(all_data)
+    with open('largest_temp_range_station.txt', 'w') as f:
+        f.write(', '.join(stations_with_largest_range))
+
+    # Find warmest and coolest stations
+    warmest_stations, coolest_stations = find_warmest_and_coolest_stations(all_data)
+    with open('warmest_and_coolest_station.txt', 'w') as f:
+        f.write(f"Warmest: {', '.join(warmest_stations)}\n")
+        f.write(f"Coolest: {', '.join(coolest_stations)}")
+
+if __name__ == "__main__":
+    main()
