@@ -1,100 +1,76 @@
-import pandas as pd
-import os
-import numpy as np
+import turtle
 
-def calculate_average_monthly_temperatures(data):
-    """
-    Calculates the average temperature for each month.
+# Function to draw the tree branches
+def draw_tree(t, length, angle_left, angle_right, depth, reduction_factor):
+    if depth == 0:
+        return
 
-    Args:
-        data: DataFrame containing temperature data with columns 'Date' and 'Temperature'.
+    # Set the color for parent branches (brown) and child branches (green)
+    if depth == 1:  # Draw green leaves for the smallest branches
+        t.color("green")
+        t.pensize(1)
+    else:  # Parent branches should be brown
+        t.color("brown")
+        t.pensize(2)
 
-    Returns:
-        Series: Series with month as index and average temperature as values.
-    """
-    data['Month'] = pd.to_datetime(data['Date']).dt.month
-    return data.groupby('Month')['Temperature'].mean()
+    t.forward(length)  # Draw the current branch
 
-def calculate_seasonal_averages(data):
-    """
-    Calculates the average temperature for each season across all years.
+    # Draw the left branch recursively
+    t.left(angle_left)
+    draw_tree(t, length * reduction_factor, angle_left, angle_right, depth - 1, reduction_factor)
 
-    Args:
-        data: DataFrame containing temperature data with columns 'Date' and 'Temperature'.
+    # Go back to the main branch
+    t.right(angle_left + angle_right)
 
-    Returns:
-        Series: Series with seasons as index and average temperature as values.
-    """
-    data['Season'] = pd.to_datetime(data['Date']).dt.month.map({
-        12: 'Winter', 1: 'Winter', 2: 'Summer', 
-        3: 'Autumn', 4: 'Autumn', 5: 'Spring', 
-        6: 'Autumn', 7: 'Winter', 8: 'Spring', 
-        9: 'Spring', 10: 'Summer', 11: 'Summer'
-    })
-    return data.groupby('Season')['Temperature'].mean()
+    # Draw the right branch recursively
+    draw_tree(t, length * reduction_factor, angle_left, angle_right, depth - 1, reduction_factor)
 
-def find_station_with_largest_temp_range(data):
-    """
-    Finds the station/stations with the largest temperature range.
+    # Go back to the main branch
+    t.left(angle_right)
+    t.backward(length)
 
-    Args:
-        data: DataFrame containing temperature data with columns 'Station' and 'Temperature'.
+    # After finishing both branches, draw leaves at the tip of this branch
+    if depth == 1:  # Only draw leaves at the last depth (the smallest branches)
+        draw_leaves(t)
 
-    Returns:
-        list: List of station names with the largest temperature range.
-    """
-    temp_ranges = data.groupby('Station')['Temperature'].max() - data.groupby('Station')['Temperature'].min()
-    max_range = temp_ranges.max()
-    return list(temp_ranges[temp_ranges == max_range].index)
+# Function to draw leaves (a small green circle at the end of branches)
+def draw_leaves(t):
+    t.color("green")
+    t.begin_fill()
+    t.circle(5)  # Draw a small circular leaf
+    t.end_fill()
 
-def find_warmest_and_coolest_stations(data):
-    """
-    Finds the warmest and coolest station/stations.
+# Function to set up the turtle environment and start drawing
+def setup_tree():
+    # Set up the screen
+    screen = turtle.Screen()
+    screen.bgcolor("skyblue")  # Set the background color
 
-    Args:
-        data: DataFrame containing temperature data with columns 'Station' and 'Temperature'.
+    # Set up the turtle
+    t = turtle.Turtle()
+    t.speed(0)  # Set turtle speed to fastest
 
-    Returns:
-        tuple: Tuple containing lists of warmest and coolest stations.
-    """
-    warmest = data.groupby('Station')['Temperature'].mean().idxmax()
-    coolest = data.groupby('Station')['Temperature'].mean().idxmin()
-    return [warmest], [coolest]
+    # Get user inputs for tree parameters
+    angle_left = float(input("Enter the left branch angle (in degrees): "))
+    angle_right = float(input("Enter the right branch angle (in degrees): "))
+    start_length = float(input("Enter the starting branch length (in pixels): "))
+    depth = int(input("Enter the recursion depth: "))
+    reduction_factor = float(input("Enter the branch length reduction factor (as a percentage, e.g., 70 for 70%): ")) / 100
 
-def main():
-    """
-    Main function to read data, perform analysis, and save results.
-    """
-    data_dir = 'temperatures'
-    all_data = pd.DataFrame()
+    # Position the turtle at the base of the tree
+    t.left(90)  # Face upwards
+    t.penup()
+    t.backward(100)  # Move the turtle down a little bit to start
+    t.pendown()
 
-    # Read data from all CSV files
-    for filename in os.listdir(data_dir):
-        if filename.endswith('.csv'):
-            filepath = os.path.join(data_dir, filename)
-            year_data = pd.read_csv(filepath)
-            all_data = pd.concat([all_data, year_data])
+    # Draw the tree with the provided parameters
+    draw_tree(t, start_length, angle_left, angle_right, depth, reduction_factor)
 
-    # Calculate average monthly temperatures
-    monthly_avg_temp = calculate_average_monthly_temperatures(all_data)
-    with open('average_temp.txt', 'w') as f:
-        f.write(str(monthly_avg_temp))
+    # Hide the turtle after drawing
+    t.hideturtle()
 
-    # Calculate average seasonal temperatures
-    seasonal_avg_temp = calculate_seasonal_averages(all_data)
-    print("Average Seasonal Temperatures:")
-    print(seasonal_avg_temp)
+    # Keep the window open
+    turtle.done()
 
-    # Find station with largest temperature range
-    stations_with_largest_range = find_station_with_largest_temp_range(all_data)
-    with open('largest_temp_range_station.txt', 'w') as f:
-        f.write(', '.join(stations_with_largest_range))
-
-    # Find warmest and coolest stations
-    warmest_stations, coolest_stations = find_warmest_and_coolest_stations(all_data)
-    with open('warmest_and_coolest_station.txt', 'w') as f:
-        f.write(f"Warmest: {', '.join(warmest_stations)}\n")
-        f.write(f"Coolest: {', '.join(coolest_stations)}")
-
-if __name__ == "__main__":
-    main()
+# Run the setup function
+setup_tree()
